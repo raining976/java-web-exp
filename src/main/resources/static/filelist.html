@@ -73,8 +73,10 @@
 			</form>
 			<nav aria-label="breadcrumb">
 				<ol class="breadcrumb">
-					<li class="breadcrumb-item" v-for="(item,i) in curPath" :key="i"
-						><a @click="navigateTo(item)" href="#">{{item.name}}</a></li>
+					<li class="breadcrumb-item" :class="{active: i==curPathIndex}" v-for="(item,i) in curPath" :key="i">
+					<a v-if="i != curPath.length-1" @click="navigateTo(item)" href="#"><i class="bi bi-house-door" v-if='i == 0'></i> {{item.name}}</a>
+					<span v-if="i == curPath.length-1"><i class="bi bi-house-door" v-if='i == 0'></i> {{item.name}}</span>	
+					</li>
 				</ol>
 			</nav>
 			<table class="table table-hover">
@@ -109,10 +111,11 @@
         	// 0 目录 1 图片 2 媒体 3 文本 4 其他
         	icons:["bi bi-folder","bi bi-image","bi bi-film","bi bi-file-earmark-text","bi bi-file-earmark"],
         	username:"User",
+        	curPathIndex:0,
         	curPath:[
         		{
         			id:-1,
-        			name:"root"
+        			name:"主页"
         		},
         	
         	], // 当前路径
@@ -218,6 +221,7 @@
 					id:item.id,
 					name:item.name
 				})
+				this.curPathIndex = this.curPath.length-1
 				this.curlist = this.hanlerFileList(item.children)
 			},
 			// 根据id获取对应文件列表
@@ -230,6 +234,7 @@
 			// 点击导航栏进入目录
 			navigateTo(item){
 				let i = this.curPath.indexOf(item)
+				this.curPathIndex = i
 				console.log(i)
 				this.curlist = this.getFileListById(item.id)
 				this.curPath.splice(i+1)
