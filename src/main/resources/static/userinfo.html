@@ -26,8 +26,10 @@
 				<div class="collapse navbar-collapse" id="navbarSupportedContent">
 					<ul class="navbar-nav me-auto mb-2 mb-lg-0">
 						<li class="nav-item"><a class="nav-link active"
-							aria-current="page" href="#">Home</a></li>
+							aria-current="page" href="/">Home</a></li>
 						<li class="nav-item"><a class="nav-link" href="#">About</a></li>
+						<li class="nav-item"><a class="nav-link"
+							href="/filelist.html">FileList</a></li>
 					</ul>
 					<div class="d-flex">
 						<div class="btn-group">
@@ -36,7 +38,7 @@
 							<ul class="dropdown-menu dropdown-menu-end">
 								<li><a href="userinfo.html" class="dropdown-item"
 									type="button">我的资料</a></li>
-								<li><a href="logout" class="dropdown-item" type="button">Logout</a></li>
+								<li><a href="/" class="dropdown-item" type="button">Logout</a></li>
 							</ul>
 						</div>
 					</div>
@@ -62,6 +64,7 @@
 	new Vue({
 		el : '#userinfo',
 		data : {
+			username:"USer",
 			user:{
 				id:"",
 				username:"",
@@ -79,6 +82,7 @@
 				// 判断当前是否登陆
 				let username = localStorage.getItem("USER_ID")
 				if(username != null){
+					this.username = username
 					axios.get("user/info",{
 						params:{
 							name:username
