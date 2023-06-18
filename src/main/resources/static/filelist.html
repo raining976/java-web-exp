@@ -65,7 +65,8 @@
 					<input class="form-control" type="file" ref="fileInput" multiple>
 				</div>
 				<div class="col-auto">
-					<button class="btn btn-primary mb-3" @click="uploadFiles" type="submit">上传</button>
+					<button class="btn btn-primary mb-3" @click.prevent="uploadFiles"
+						type="submit">上传</button>
 				</div>
 			</form>
 
@@ -73,18 +74,19 @@
 				<label for="formFileMultiple" class="form-label">新建目录或文本文件(在当前目录下)</label>
 				<div class="col-auto">
 					<label for="filename" class="visually-hidden">名称</label> <input
-						type="password" class="form-control" id="inputPassword2"
+						type="text" class="form-control" v-model="newFileForm.name"
 						placeholder="名称">
 				</div>
 				<select class="form-select form-select-sm"
 					style="width: 150px; height: 38px"
-					aria-label=".form-select-sm example">
-					<option selected>文件类型</option>
-					<option value="1">目录</option>
-					<option value="2">文本文件</option>
+					aria-label=".form-select-sm example" v-model="newFileForm.type">
+					<option disabled value="">文件类型</option>
+					<option v-for="option in options" :key="option.value"
+						:value="option.value">{{ option.label }}</option>
 				</select>
 				<div class="col-auto">
-					<button type="submit" class="btn btn-primary mb-3">新建</button>
+					<button type="submit" class="btn btn-primary mb-3"
+						@click="submitNewFile">新建</button>
 				</div>
 			</form>
 			<nav aria-label="breadcrumb">
@@ -129,6 +131,20 @@
         	// 0 目录 1 图片 2 媒体 3 文本 4 其他
         	icons:["bi bi-folder","bi bi-image","bi bi-film","bi bi-file-earmark-text","bi bi-file-earmark"],
         	username:"User",
+        	options:[
+        		{
+        			label:"目录",
+        			value:0,
+        		},
+        		{
+        			label:"文本文件",
+        			value:1,
+        		}
+        	],
+        	newFileForm:{
+        		name: "", // 文件名
+        		type: "", // 文件类型
+        	},
         	curPathIndex:0, // 当前目录在路径列表中的index
         	curPath:[
         		{
@@ -138,64 +154,11 @@
         	
         	], // 当前路径
         	curlist:[], // 当前展示的文件目录
-        	filelist:[
-        		{
-        			id:1,
-        			parent_id:-1,
-        			name:"root",
-        			type:"folder",
-        			size:"-",
-        			updated:"2023/6/18",
-        			children:[
-        				{
-                			id:10,
-                			parent_id:1,
-                			name:"test.txt",
-                			type:"txt",
-                			size:"30kb",
-                			updated:"2023/6/18",
-                		},
-        			]
-        		},
-        		{
-        			id:2,
-        			parent_id:-1,
-        			name:"user",
-        			type:"folder",
-        			size:"-",
-        			updated:"2023/6/18",
-        			children:[]
-        		},
-        		{
-        			id:3,
-        			parent_id:-1,
-        			name:"xx视频",
-        			type:"media",
-        			size:"10m",
-        			updated:"2023/6/18",
-        		},
-        		{
-        			id:4,
-        			parent_id:-1,
-        			name:"xx.png",
-        			type:"img",
-        			size:"29kb",
-        			updated:"2023/6/18",
-        		},
-        		{
-        			id:5,
-        			parent_id:-1,
-        			name:"xx.txt",
-        			type:"txt",
-        			size:"20kb",
-        			updated:"2023/6/18",
-        		},
-        	]
+        	filelist:[] // 所有的文件列表 
         },
         async created(){
 			await this.getFileList()
 			this.curlist = this.filelist
-			this.curlist = this.hanlerFileList(this.curlist) 
 		},
 		methods:{
 			// 获取文件列表
@@ -206,7 +169,7 @@
 					this.username = username
 					// TODO：获取文件列表的操作
 					await axios.get("/file/filelist").then(res=>{
-						this.filelist = res.data
+						this.filelist = this.handlerFileList(res.data,-1)
 					}).catch(err=>{
 						alert("出错了哦")
 						console.log(err)
@@ -217,16 +180,49 @@
 				}
 				
 			},
-			// 处理文件 将扁平化的列表变为树状 添加类型信息
-			hanlerFileList(list){
-				list.forEach(item=>{
-					item.typeIndex = this.type2iconNum(item.type)
+			// 新建目录或文件
+			submitNewFile(){
+				if(this.newFileForm.name == "" && (this.newFileForm.type != 0 || this.newFileForm.type != 1)){
+					alert("表单不能有空项哦")
+					return
+				}
+				const form = new FormData()
+				form.append("name",this.newFileForm.name)
+				form.append("parent_id",this.curPath[this.curPath.length-1].id)
+				form.append("type",this.newFileForm.type)
+				axios.post("/file/newFile",form).then(res=>{
+					if(res.status == 200){
+						alert(res.data)
+					}
+				}).catch(err=>{
+					if(err.response.status == 409){
+						alert(err.response.data)
+					}
+					else alert("出错了哦")
+					console.log(err)
 				})
-				return list
+			},
+			
+			// 处理文件 将扁平化的列表变为树状 添加类型信息
+			handlerFileList(list,pid){
+				const result = [];
+				// 遍历列表，找到指定 parentId 的对象
+				for (const item of list) {
+			    if (item.parent_id == pid) {
+			      	// 递归调用
+			      	const children = this.handlerFileList(list, item.id);
+			      	item.children = children
+			      	item.typeIndex = this.type2iconNum(item.type)
+			      	result.push(item);
+			    	}
+			  	}
+				return result;
 			},
 			// 文件类型与图标对应
 			type2iconNum(type){
-				if(type.includes("image")){
+				if (type == "folder")
+					return 0
+				else if(type.includes("image")){
 					return 1
 				}else if(type.includes("pdf")){
 					return 3
@@ -255,7 +251,7 @@
 					name:item.name
 				})
 				this.curPathIndex = this.curPath.length-1
-				this.curlist = this.hanlerFileList(item.children)
+				this.curlist = item.children
 			},
 			// 根据parent_id获取对应文件列表
 			getFileListById(pid){
