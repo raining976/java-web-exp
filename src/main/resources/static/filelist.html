@@ -14,11 +14,22 @@
 <link rel="stylesheet"
 	href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
 </head>
+<style>
+.table-hover tbody tr {
+	transition: 0.3s;
+}
+
+.table-hover tbody tr:hover {
+	cursor: pointer; /* 设置鼠标样式为手型 */
+	transform: scale(1.005);
+	transform-origin: center;
+}
+</style>
 <body>
 	<div id="filelist">
 		<nav class="navbar bg-dark navbar-expand-lg bg-body-tertiary shadow">
 			<div class="container-fluid">
-				<a class="navbar-brand" href="#">Hello Web</a>
+				<a class="navbar-brand" href="/">Hello Web</a>
 				<button class="navbar-toggler" type="button"
 					data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
 					aria-controls="navbarSupportedContent" aria-expanded="false"
@@ -48,7 +59,18 @@
 			</div>
 		</nav>
 		<div class="container" style="margin-top: 30px">
-			<form class="row g-3 ">
+			<form class="row">
+				<label for="formFileMultiple" class="form-label">上传文件到当前目录(可上传多个)</label>
+				<div class="col-auto" style="width: 377px; padding-right: 0">
+					<input class="form-control" type="file" ref="fileInput" multiple>
+				</div>
+				<div class="col-auto">
+					<button class="btn btn-primary mb-3" @click="uploadFiles" type="submit">上传</button>
+				</div>
+			</form>
+
+			<form class="row">
+				<label for="formFileMultiple" class="form-label">新建目录或文本文件(在当前目录下)</label>
 				<div class="col-auto">
 					<label for="filename" class="visually-hidden">名称</label> <input
 						type="password" class="form-control" id="inputPassword2"
@@ -60,23 +82,19 @@
 					<option selected>文件类型</option>
 					<option value="1">目录</option>
 					<option value="2">文本文件</option>
-				</select> <select class="form-select form-select-sm"
-					style="width: 150px; height: 38px; margin-left: 10px"
-					aria-label=".form-select-sm example">
-					<option selected>路径</option>
-					<option value="1">user</option>
-					<option value="2">root</option>
 				</select>
 				<div class="col-auto">
-					<button type="submit" class="btn btn-primary mb-3">创建</button>
+					<button type="submit" class="btn btn-primary mb-3">新建</button>
 				</div>
 			</form>
 			<nav aria-label="breadcrumb">
 				<ol class="breadcrumb">
-					<li class="breadcrumb-item" :class="{active: i==curPathIndex}" v-for="(item,i) in curPath" :key="i">
-					<a v-if="i != curPath.length-1" @click="navigateTo(item)" href="#"><i class="bi bi-house-door" v-if='i == 0'></i> {{item.name}}</a>
-					<span v-if="i == curPath.length-1"><i class="bi bi-house-door" v-if='i == 0'></i> {{item.name}}</span>	
-					</li>
+					<li class="breadcrumb-item" :class="{active: i==curPathIndex}"
+						v-for="(item,i) in curPath" :key="i"><a
+						v-if="i != curPath.length-1" @click="navigateTo(item)" href="#"><i
+							class="bi bi-house-door" v-if='i == 0'></i> {{item.name}}</a> <span
+						v-if="i == curPath.length-1"><i class="bi bi-house-door"
+							v-if='i == 0'></i> {{item.name}}</span></li>
 				</ol>
 			</nav>
 			<table class="table table-hover">
@@ -84,19 +102,19 @@
 					<tr>
 						<th scope="col">名称</th>
 						<th scope="col">类型</th>
-						<th scope="col">创建时间</th>
+						<th scope="col">大小</th>
 						<th scope="col">更新时间</th>
 					</tr>
 				</thead>
 				<tbody>
 					<tr @dblclick="goBack" v-show="curPath.length != 1">
-						<td colspan="4"><i :class="icons[0]" ></i> ...</td>
+						<td colspan="4"><i :class="icons[0]"></i> ...</td>
 					</tr>
 					<tr v-for="(item,index) in curlist" :key="index"
 						@dblclick="openFolder(item)">
 						<td><i :class="icons[item.typeIndex]"></i> {{item.name}}</td>
 						<td>{{item.type}}</td>
-						<td>{{item.created}}</td>
+						<td>{{item.size}}</td>
 						<td>{{item.updated}}</td>
 					</tr>
 				</tbody>
@@ -111,7 +129,7 @@
         	// 0 目录 1 图片 2 媒体 3 文本 4 其他
         	icons:["bi bi-folder","bi bi-image","bi bi-film","bi bi-file-earmark-text","bi bi-file-earmark"],
         	username:"User",
-        	curPathIndex:0,
+        	curPathIndex:0, // 当前目录在路径列表中的index
         	curPath:[
         		{
         			id:-1,
@@ -126,7 +144,7 @@
         			parent_id:-1,
         			name:"root",
         			type:"folder",
-        			created:"2023/6/18",
+        			size:"-",
         			updated:"2023/6/18",
         			children:[
         				{
@@ -134,7 +152,7 @@
                 			parent_id:1,
                 			name:"test.txt",
                 			type:"txt",
-                			created:"2023/6/18",
+                			size:"30kb",
                 			updated:"2023/6/18",
                 		},
         			]
@@ -144,7 +162,7 @@
         			parent_id:-1,
         			name:"user",
         			type:"folder",
-        			created:"2023/6/18",
+        			size:"-",
         			updated:"2023/6/18",
         			children:[]
         		},
@@ -153,7 +171,7 @@
         			parent_id:-1,
         			name:"xx视频",
         			type:"media",
-        			created:"2023/6/18",
+        			size:"10m",
         			updated:"2023/6/18",
         		},
         		{
@@ -161,7 +179,7 @@
         			parent_id:-1,
         			name:"xx.png",
         			type:"img",
-        			created:"2023/6/18",
+        			size:"29kb",
         			updated:"2023/6/18",
         		},
         		{
@@ -169,27 +187,35 @@
         			parent_id:-1,
         			name:"xx.txt",
         			type:"txt",
-        			created:"2023/6/18",
+        			size:"20kb",
         			updated:"2023/6/18",
         		},
         	]
         },
-        created(){
-			this.getFileList()
+        async created(){
+			await this.getFileList()
 			this.curlist = this.filelist
-			this.curlist = this.hanlerFileList(this.curlist)
+			this.curlist = this.hanlerFileList(this.curlist) 
 		},
 		methods:{
 			// 获取文件列表
-			getFileList(){
+			// 要处理异步
+		 	async getFileList(){
 				let username = localStorage.getItem("USER_ID")
 				if(username != null){
 					this.username = username
 					// TODO：获取文件列表的操作
+					await axios.get("/file/filelist").then(res=>{
+						this.filelist = res.data
+					}).catch(err=>{
+						alert("出错了哦")
+						console.log(err)
+					})
 				}else{
 					alert("您还未登陆哦")
 					window.location.href = "/login.html"
 				}
+				
 			},
 			// 处理文件 将扁平化的列表变为树状 添加类型信息
 			hanlerFileList(list){
@@ -200,7 +226,14 @@
 			},
 			// 文件类型与图标对应
 			type2iconNum(type){
-				switch(type){
+				if(type.includes("image")){
+					return 1
+				}else if(type.includes("pdf")){
+					return 3
+				}else{
+					return 4
+				}
+				/* switch(type){
 					case "folder":
 						return 0;
 					case "img":
@@ -212,7 +245,7 @@
 					default:
 						return 4
 					
-				}
+				} */
 			},
 			// 双击打开文件夹
 			openFolder(item){
@@ -224,9 +257,9 @@
 				this.curPathIndex = this.curPath.length-1
 				this.curlist = this.hanlerFileList(item.children)
 			},
-			// 根据id获取对应文件列表
-			getFileListById(id){
-				if(id == -1){
+			// 根据parent_id获取对应文件列表
+			getFileListById(pid){
+				if(pid == -1){
 					return this.filelist
 				}
 				// TODO: 实现根据id从filelist找到对应id的children
@@ -234,8 +267,8 @@
 			// 点击导航栏进入目录
 			navigateTo(item){
 				let i = this.curPath.indexOf(item)
+				if(i == this.curIndex) return
 				this.curPathIndex = i
-				console.log(i)
 				this.curlist = this.getFileListById(item.id)
 				this.curPath.splice(i+1)
 			},
@@ -243,6 +276,30 @@
 			goBack(){
 				let length = this.curPath.length
 				this.navigateTo(this.curPath[length-2])
+			},
+			// 上传文件
+			uploadFiles(){
+				const fileInput = this.$refs.fileInput
+				const files = fileInput.files
+				if(files.length == 0) return
+				const formData = new FormData()
+				
+				for(let i = 0; i < files.length; i++){
+					formData.append("files",files[i])
+				}
+				formData.append("parent_id",this.curPath[this.curPath.length-1].id)
+				console.log(formData)
+				
+			    // 发起 POST 请求
+			    axios.post('/file/upload', formData)
+			      .then(response => {
+			        // 处理上传成功的响应
+			        console.log(response.data);
+			      })
+			      .catch(error => {
+			        // 处理上传失败的错误
+			        console.error(error);
+			      });
 			}
 			
 		}
