@@ -124,17 +124,30 @@ public class Conn {
 	}
 
 	// 上传文件信息到数据库
-	public boolean uploadFile(String filePath,int pid,int userId,MultipartFile file) {
+	public boolean uploadFile(String filePath, int pid, int userId, MultipartFile file) {
 		// 数据准备
-		if(file == null) return false;
+		if (file == null)
+			return false;
 		String name = file.getOriginalFilename(); // 获取文件名
 		String type = file.getContentType(); // 获取文件类型
 		Long size = file.getSize(); // 获取文件大小
-        LocalDateTime now = LocalDateTime.now(); // 获取当前时间
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yy-MM-dd HH:mm:ss"); // 创建日期时间格式化器
-        String formattedDateTime = now.format(formatter); // 格式化当前时间为字符串
-		String strSql = "insert into file (user_id, parent_id,name,type,size,path,updated) values('"+userId+"','"+pid+"','"+name+"','"+type+"','"+size+"','"+filePath+"','"+formattedDateTime+"')";
+		LocalDateTime now = LocalDateTime.now(); // 获取当前时间
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yy-MM-dd HH:mm:ss"); // 创建日期时间格式化器
+		String formattedDateTime = now.format(formatter); // 格式化当前时间为字符串
+		String strSql = "insert into file (user_id, parent_id,name,type,size,path,updated) values('" + userId + "','"
+				+ pid + "','" + name + "','" + type + "','" + size + "','" + filePath + "','" + formattedDateTime
+				+ "')";
 		return this.UpdateSQL(strSql);
+	}
+
+	// 创建文件夹
+	public boolean uploadFolder(String name, int pid, int userId) {
+		LocalDateTime now = LocalDateTime.now(); // 获取当前时间
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yy-MM-dd HH:mm:ss"); // 创建日期时间格式化器
+		String formattedDateTime = now.format(formatter); // 格式化当前时间为字符串
+		String strSql = "insert into file (user_id,parent_id,name,type,size,path,updated) values ('"+userId+"','"+pid+"','"+name+"','folder',0,'-','"+formattedDateTime+"')";
+		if(this.UpdateSQL(strSql)) return true;
+		return false;
 	}
 
 	// 根据user id 和 parent id 获取 文件列表

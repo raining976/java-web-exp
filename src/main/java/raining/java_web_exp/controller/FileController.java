@@ -81,9 +81,15 @@ public class FileController {
 	 * @return 状态
 	 */
 	@PostMapping("/newFile")
-	public ResponseEntity<String> newFile(@RequestParam("parent_id") int pid, @RequestParam("type") int type,@CookieValue("USER_ID") String username){
-		if(username ==null) return ResponseEntity.status(HttpStatus.CONFLICT).body("出错了哦～");
-		return ResponseEntity.ok("success");
+	public ResponseEntity<String> newFile(@RequestParam("name") String name,@RequestParam("parent_id") int pid, @RequestParam("type") int type,@CookieValue("USER_ID") String username){
+		if(username =="") return ResponseEntity.status(HttpStatus.CONFLICT).body("出错了哦～");
+		System.out.println(username + type);
+		int userId = conn.getUserByUsername(username).getId();
+		
+		if(type == 0) {
+			if(conn.uploadFolder(name, pid, userId)) return ResponseEntity.ok("目录创建成功了哦");
+		}
+		return ResponseEntity.status(HttpStatus.CONFLICT).body("创建失败啦！");
 	}
 	
 
