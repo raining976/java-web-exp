@@ -1,12 +1,20 @@
 package raining.java_web_exp.db;
 
+import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.ArrayList;
 
+import org.springframework.web.multipart.MultipartFile;
+
+import raining.java_web_exp.model.FileEntity;
 import raining.java_web_exp.model.User;
 
 public class Conn {
@@ -16,10 +24,10 @@ public class Conn {
 	PreparedStatement ps = null;
 
 	// 创建对象的同时连接数据库，以便下边的函数使用
-	public Conn(){
+	public Conn() {
 		connDB();
 	}
-	
+
 	// 连接数据库
 	public void connDB() {
 		try {
@@ -41,7 +49,7 @@ public class Conn {
 		}
 
 	}
-	
+
 	// 关闭数据库
 	public void closeDB() throws SQLException {
 		if (rs != null) {
@@ -69,50 +77,34 @@ public class Conn {
 		return rs;
 	}
 
-	public void UpdateSQL(String sql) {
+	public boolean UpdateSQL(String sql) {
+		boolean flag = false;
 		try {
 			stmt = con.createStatement();
 			stmt.executeUpdate(sql);
+			flag = true;
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
+		return flag;
 
 	}
 
-	public boolean isUserExist(String username) {
-		if (username == null || username.equals(" "))
-			return false;
-		String sqlStr = "select count(*) from user where username = ?";
-
-		try {
-			stmt = con.createStatement();
-			ps = con.prepareStatement(sqlStr);
-			ps.setString(1, username);
-			rs = ps.executeQuery();
-
-			if (rs.getInt(1) > 0)
-				return true;
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-		return false;
-
-	}
-	
+	// 通过用户名获取用户信息
 	public User getUserByUsername(String name) {
-		
+
 		User user = null;
-		String str = "select * from user where name = '"+name+"'";
+		String str = "select * from user where name = '" + name + "'";
 		try {
 			rs = this.SelectedSql(str);
-			if(rs.next()) {
+			if (rs.next()) {
 				// TODO: 处理查询到的数据
 				int id = rs.getInt("id");
 				String username = rs.getString("name");
 				String password = rs.getString("password");
 				String imgUrl = rs.getString("img_url");
 				String createDate = rs.getString("create_date");
-				user = new User(id,username,password,imgUrl,createDate);
+				user = new User(id, username, password, imgUrl, createDate);
 			}
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -120,4 +112,54 @@ public class Conn {
 		return user;
 	}
 
+	// 注册新用户
+	public boolean registerUser(User user) {
+		if (this.getUserByUsername(user.getUsername()) == null) {
+			String str = "insert into user (name, password, img_url, create_date) VALUES ('" + user.getUsername()
+					+ "', '" + user.getPassword() + "' , '" + user.getImgUrl() + "','" + user.getCreateDate() + "');";
+			this.UpdateSQL(str);
+			return true;
+		}
+		return false;
+	}
+
+	// 上传文件信息到数据库
+	public boolean uploadFile(String filePath,int pid,int userId,MultipartFile file) {
+		// 数据准备
+		if(file == null) return false;
+		String name = file.getOriginalFilename(); // 获取文件名
+		String type = file.getContentType(); // 获取文件类型
+		Long size = file.getSize(); // 获取文件大小
+        LocalDateTime now = LocalDateTime.now(); // 获取当前时间
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yy-MM-dd HH:mm:ss"); // 创建日期时间格式化器
+        String formattedDateTime = now.format(formatter); // 格式化当前时间为字符串
+		String strSql = "insert into file (user_id, parent_id,name,type,size,path,updated) values('"+userId+"','"+pid+"','"+name+"','"+type+"','"+size+"','"+filePath+"','"+formattedDateTime+"')";
+		return this.UpdateSQL(strSql);
+	}
+
+	// 根据user id 和 parent id 获取 文件列表
+	public List<FileEntity> getByUserIdAndParentId(int userId) {
+		List<FileEntity> filelist = new ArrayList<FileEntity>();
+		String strSql = "select * from file where user_id = '" + userId + "'";
+		try {
+			rs = this.SelectedSql(strSql);
+			while (rs.next()) {
+				// 获取文件信息并创建对应entity
+				int id = rs.getInt("id");
+				int user_id = rs.getInt("user_id");
+				int parent_id = rs.getInt("parent_id");
+				String name = rs.getString("name");
+				String type = rs.getString("type");
+				Long size = rs.getLong("size");
+				String path = rs.getString("path");
+				String date = rs.getString("updated");
+				FileEntity fileEntity = new FileEntity(id, user_id, parent_id, name, type, size, path, date);
+				filelist.add(fileEntity);
+			}
+			return filelist;
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return filelist;
+	}
 }
