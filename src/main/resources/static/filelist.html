@@ -9,6 +9,10 @@
 	rel="stylesheet"
 	integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM"
 	crossorigin="anonymous">
+<script
+	src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
+	integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz"
+	crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
 <link rel="stylesheet"
@@ -23,6 +27,11 @@
 	cursor: pointer; /* 设置鼠标样式为手型 */
 	transform: scale(1.005);
 	transform-origin: center;
+}
+
+.table-hover tbody tr.selectAcive>td, .table-hover tbody tr.selectActive
+	{
+	--bs-table-bg-state: #ececec;
 }
 </style>
 <body>
@@ -113,7 +122,11 @@
 						<td colspan="4"><i :class="icons[0]"></i> ...</td>
 					</tr>
 					<tr v-for="(item,index) in curlist" :key="index"
-						@dblclick="openFolder(item)">
+						@dblclick="openFolder(item)" draggable="true"
+						@dragstart="onDragStart(index)"
+						@click="onFileClick(index, $event)" @dragend="onDragEnd(index)"
+						@drop="drop($event,index)" @dragover="dragOver($event,index)"
+						:class="{selectActive: item.selected == true}">
 						<td><i :class="icons[item.typeIndex]"></i> {{item.name}}</td>
 						<td>{{item.type}}</td>
 						<td>{{item.size}}</td>
@@ -131,6 +144,10 @@
         	// 0 目录 1 图片 2 媒体 3 文本 4 其他
         	icons:["bi bi-folder","bi bi-image","bi bi-film","bi bi-file-earmark-text","bi bi-file-earmark"],
         	username:"User",
+        	isCmdPressed:false, // cmd简是否被按下
+        	selectedIds: [], // 存储选中文件的id
+        	selectedIndexes:[], //  存储选中文件的索引
+        	curSelectIndex:-1, // 当前选中文件的索引 
         	options:[
         		{
         			label:"目录",
@@ -172,6 +189,7 @@
 					this.username = username
 					await axios.get("/file/filelist").then(res=>{
 						this.filelist = this.handlerFileList(res.data,-1)
+						console.log(this.filelist)
 					}).catch(err=>{
 						alert("出错了哦")
 						console.log(err)
@@ -215,6 +233,15 @@
 			      	const children = this.handlerFileList(list, item.id);
 			      	item.children = children
 			      	item.typeIndex = this.type2iconNum(item.type)
+			      	item.selected = false;
+			      	item.size = item.size/1024
+			      	if(item.size > 1024){
+			      		item.size = (item.size/1024).toFixed(1) + "MB"
+			      	}else if(item.size < 1024 && item.size > 0){
+			      		item.size = (item.size).toFixed(1) + "KB"
+			      	}else{
+			      		item.size = "-"
+			      	}
 			      	result.push(item);
 			    	}
 			  	}
@@ -278,7 +305,7 @@
 				let i = this.curPath.indexOf(item)
 				if(i == this.curIndex) return
 				this.curPathIndex = i
-				this.curlist = this.getFileListById(item.id)
+				this.curlist = this.findChildren(item.id)
 				console.log("pid",item.id)
 				console.log(this.curlist)
 				this.curPath.splice(i+1)
@@ -311,14 +338,108 @@
 			        // 处理上传失败的错误
 			        console.error(error);
 			      });
-			}
+			},
+			// 开始拖动文件的起始索引
+			onDragStart(index){
+				console.log(this.curlist[index].name)
+				this.curSelectIndex = index
+			},
+			 dragOver(event, index) {
+			      event.preventDefault();
+			    },
+			drop(event, index) {
+		     	event.preventDefault();
+		     	const draggedIndex = this.curSelectIndex
+		      	const draggedItem = this.curlist[draggedIndex];
+		      	const targetItem = this.curlist[index];
+		      
+		     	if (targetItem.type === 'folder') {
+			        // 将拖拽的文件或文件夹放入目标文件夹中
+			        targetItem.children.push(draggedItem);
+			     	// TODO: 请求更新
+			      	axios.get("/file/changeFilePosition",{
+			      		params:{
+			      			id:parseInt(draggedItem.id),
+			      			pid:targetItem.id
+			      		}
+			      	}).then(res=>{
+			      		console.log(res)
+			      	}).catch(err=>{
+			      		alert("出错啦")
+			      		console.log(err)
+			      	})
+			      	window.location.reload();
+		     	}
+		      
+		      	// 从原位置删除拖拽的文件或文件夹
+		      	this.curlist.splice(draggedIndex, 1);
+		      	
+			},
+			// 结束拖动
+			onDragEnd(indx){
+				// console.log(this.curlist[indx].name)
+			},
+			// 单击文件选中 按住cmd可以多选
+			onFileClick(index, $event){
+				if (this.isCmdPressed) {
+			        // 按住Command键时，切换文件的选中状态
+			        this.curlist[index].selected = !this.curlist[index].selected;
+			    } else {
+			        // 未按住Command键时，只选中当前文件
+			        this.clearSelection();
+			    	this.curlist[index].selected = true;
+			    }
+			    this.updateSelectedIds();
+			    console.log(this.selectedIds)
+			},
+			// 清空文件选中状态
+			clearSelection(){
+			 	for (const file of this.curlist) {
+			        file.selected = false;
+			    }
+			},
+			// 更新选中文件的id
+			updateSelectedIds() {
+		      // 更新选中文件的id数组
+		      	this.selectedIndexes = this.curlist.reduce((indexes, file, idx) => {
+		        if (file.selected) {
+		          indexes.push(idx);
+		        }
+		        return indexes;
+		      }, []);
+		      this.selectedIds = []
+		      for(let idx of this.selectedIndexes){
+		    	  this.selectedIds.push(this.curlist[idx].id)
+		      }
+		    },
+		    onKeyDown(event) {
+		        if (event.key === 'Meta' || event.key === 'Control') {
+		          // Command键按下时设置isCommandPressed为true
+		          this.isCmdPressed = true;
+		        }
+		      },
+		    onKeyUp(event) {
+		       	if (event.key === 'Meta' || event.key === 'Control') {
+		          // Command键释放时设置isCommandPressed为false
+		          this.isCmdPressed = false;
+		        }
+		   	},
 			
-		}
+		},
+		mounted() {
+		    // 监听全局的键盘按下和释放事件
+		    window.addEventListener('keydown', this.onKeyDown);
+		    window.addEventListener('keyup', this.onKeyUp);
+		  },
+		beforeUnmount() {
+		    // 移除全局的事件监听
+		    window.removeEventListener('keydown', this.onKeyDown);
+		    window.removeEventListener('keyup', this.onKeyUp);
+		},
+
+		
     });
 	</script>
-	<script
-		src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
-		integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz"
-		crossorigin="anonymous"></script>
+
 </body>
 </html>
