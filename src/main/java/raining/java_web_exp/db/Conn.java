@@ -124,13 +124,7 @@ public class Conn {
 	}
 
 	// 上传文件信息到数据库
-	public boolean uploadFile(String filePath, int pid, int userId, MultipartFile file) {
-		// 数据准备
-		if (file == null)
-			return false;
-		String name = file.getOriginalFilename(); // 获取文件名
-		String type = file.getContentType(); // 获取文件类型
-		Long size = file.getSize(); // 获取文件大小
+	public boolean uploadFile(String name,String type,Long size,String filePath, int pid, int userId) {
 		LocalDateTime now = LocalDateTime.now(); // 获取当前时间
 		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yy-MM-dd HH:mm:ss"); // 创建日期时间格式化器
 		String formattedDateTime = now.format(formatter); // 格式化当前时间为字符串

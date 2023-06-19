@@ -1,6 +1,8 @@
 package raining.java_web_exp.controller;
 
 import java.util.List;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -18,6 +20,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.util.FileCopyUtils;
 
 import jakarta.servlet.http.HttpSession;
 import raining.java_web_exp.db.Conn;
@@ -28,6 +32,7 @@ import raining.java_web_exp.model.User;
 @RequestMapping("/file")
 public class FileController {
 	private final Conn conn;
+	private final String uploadDirPath = "upload/"; // 存储路径
 
 	public FileController() {
 		conn = new Conn();
@@ -39,21 +44,24 @@ public class FileController {
 			@RequestParam("parent_id") int parent_id, @CookieValue("USER_ID") String username, HttpSession session) {
 		if (files.size() == 0)
 			return ResponseEntity.status(HttpStatus.CONFLICT).body("你还没有上传文件哦");
-		String uploadDir = "src/main/resources/upload/"; // 存储路径
 		User user = conn.getUserByUsername(username);
-		if(user == null) return ResponseEntity.status(HttpStatus.CONFLICT).body("还没登陆哦");
+		if (user == null)
+			return ResponseEntity.status(HttpStatus.CONFLICT).body("还没登陆哦");
 		// 遍历part的列表
 		for (MultipartFile file : files) {
 			if (!file.isEmpty()) {
 				try {
 					String originalFilename = StringUtils.cleanPath(file.getOriginalFilename()); // 获取文件名
-					Path uploadPath = Path.of(uploadDir); // 将上传路径造型为path
+					Path uploadPath = Path.of(uploadDirPath); // 将上传路径造型为path
 					if (!Files.exists(uploadPath)) {
 						Files.createDirectories(uploadPath); // 上传路径不存在时创建
 					}
 					Path targetPath = uploadPath.resolve(originalFilename); // 拼接目标路径
 					// 在数据库中保存文件信息
-					conn.uploadFile(targetPath.toString(), parent_id, user.getId(), file);
+					String name = file.getOriginalFilename(); // 获取文件名
+					String type = file.getContentType(); // 获取文件类型
+					Long size = file.getSize(); // 获取文件大小
+					conn.uploadFile(name, type, size, targetPath.toString(), parent_id, user.getId());
 					Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING); // 保存文件
 				} catch (IOException e) {
 					return ResponseEntity.status(HttpStatus.CONFLICT).body("出错了哦～");
@@ -63,41 +71,80 @@ public class FileController {
 		}
 		return ResponseEntity.ok("上传成功啦！");
 	}
-	
+
 	@GetMapping("/filelist")
-	public List<FileEntity> getFileList (@CookieValue("USER_ID") String username){
+	public List<FileEntity> getFileList(@CookieValue("USER_ID") String username) {
 		User user = conn.getUserByUsername(username);
-		if(user == null) return new ArrayList<FileEntity>();
+		if (user == null)
+			return new ArrayList<FileEntity>();
 		int userId = user.getId();
 		return conn.getByUserIdAndParentId(userId);
 	}
-	
-	 // 创建目录或txt文件
+
 	/**
+	 * 创建目录或txt文件
 	 * 
-	 * @param pid 父id
-	 * @param type 0 为 folder 1 为 txt
+	 * @param pid      父id
+	 * @param type     0 为 folder 1 为 txt
 	 * @param username 用户名
 	 * @return 状态
 	 */
 	@PostMapping("/newFile")
-	public ResponseEntity<String> newFile(@RequestParam("name") String name,@RequestParam("parent_id") int pid, @RequestParam("type") int type,@CookieValue("USER_ID") String username){
-		if(username =="") return ResponseEntity.status(HttpStatus.CONFLICT).body("出错了哦～");
-		System.out.println(username + type);
+	public ResponseEntity<String> newFile(@RequestParam("name") String name, @RequestParam("parent_id") int pid,
+			@RequestParam("type") int type, @CookieValue("USER_ID") String username) {
+		if (username == "")
+			return ResponseEntity.status(HttpStatus.CONFLICT).body("出错了哦～");
 		int userId = conn.getUserByUsername(username).getId();
-		
-		if(type == 0) {
-			if(conn.uploadFolder(name, pid, userId)) return ResponseEntity.ok("目录创建成功了哦");
+		if (type == 0) {
+			if (conn.uploadFolder(name, pid, userId))
+				return ResponseEntity.ok("目录创建成功了哦");
+			else {
+				return ResponseEntity.status(HttpStatus.CONFLICT).body("创建失败啦！");
+			}
+		} else if (type == 1) {
+			// 创建txt类型的文件
+			String filename = name + ".txt";
+			// 创建文本文件
+			File uploadDir;
+			try {
+				// 创建文件
+	            uploadDir = new File(uploadDirPath);
+	            if (!uploadDir.exists()) {
+	                uploadDir.mkdirs();
+	            }
+	            File file = new File(uploadDir, filename);
+				FileWriter writer = new FileWriter(file);
+				writer.write(filename); // 将文件名称写入文件
+				writer.close();
+				long size = file.length(); // 文件大小
+				String filepath = uploadDir +"/"+ filename;
+				if (conn.uploadFile(filename, "txt", size, filepath, pid, userId)) {
+					return ResponseEntity.ok("文本文件创建成功了哦");
+				} else {
+					return ResponseEntity.status(HttpStatus.CONFLICT).body("创建失败啦！");
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			} 
 		}
-		return ResponseEntity.status(HttpStatus.CONFLICT).body("创建失败啦！");
+		return ResponseEntity.status(HttpStatus.CONFLICT).body("出错啦！");
 	}
-	
-	
-	// 修改文件（目录的）位置
+
+	/**
+	 * 修改文件（目录的）位置
+	 * 
+	 * @author raining
+	 * @param id       要移动的文件/目录的id
+	 * @param pid      移动到某个目录下
+	 * @param username 用户名
+	 * @return
+	 */
 	@GetMapping("/changeFilePosition")
-	public ResponseEntity<String> changeFilePosition(@RequestParam("id") int id ,@RequestParam("pid") int pid, @CookieValue("USER_ID") String username){
+	public ResponseEntity<String> changeFilePosition(@RequestParam("id") int id, @RequestParam("pid") int pid,
+			@CookieValue("USER_ID") String username) {
 		int userId = conn.getUserByUsername(username).getId();
-		if(conn.changeFilePid(id, userId, pid)) return ResponseEntity.ok("修改成功啦");
+		if (conn.changeFilePid(id, userId, pid))
+			return ResponseEntity.ok("修改成功啦");
 		return ResponseEntity.status(HttpStatus.CONFLICT).body("修改失败啦！");
 	}
 
