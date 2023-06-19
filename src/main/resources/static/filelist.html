@@ -256,18 +256,20 @@
 				this.curlist = item.children
 			},
 			// 根据parent_id获取对应节点的children
-			getFileListById(pid){
-				if(pid == -1) return this.filelist
-				for(const list of this.filelist){
-					if(list.id == pid)
-						return list.children
-				}
-				if(list.children && list.children.length > 0 ){
-					const foundList = this.getFileListById(list.children,pid)
-					if(foundList){
-						return foundList.children
+			findChildren(pid){
+				if(pid == -1) return this.filelist;
+				return this.getFileListById(this.filelist,pid)	
+			},
+			getFileListById(list,pid){
+				for(const item of list){
+					if(item.id == pid)
+						return item.children
+					if(item.children && item.children.length > 0 ){
+						const result = this.getFileListById(item.children,pid)
+						if(result){
+							return result
+						}
 					}
-					
 				}
 				return null
 			},
