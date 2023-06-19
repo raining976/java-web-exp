@@ -65,7 +65,7 @@
 					<input class="form-control" type="file" ref="fileInput" multiple>
 				</div>
 				<div class="col-auto">
-					<button class="btn btn-primary mb-3" @click.prevent="uploadFiles"
+					<button class="btn btn-primary mb-3" @click="uploadFiles"
 						type="submit">上传</button>
 				</div>
 			</form>
@@ -160,6 +160,9 @@
 			await this.getFileList()
 			this.curlist = this.filelist
 		},
+		unmounted(){
+			// TODO：记录当前的文件路径到缓存	
+		},
 		methods:{
 			// 获取文件列表
 			// 要处理异步
@@ -167,7 +170,6 @@
 				let username = localStorage.getItem("USER_ID")
 				if(username != null){
 					this.username = username
-					// TODO：获取文件列表的操作
 					await axios.get("/file/filelist").then(res=>{
 						this.filelist = this.handlerFileList(res.data,-1)
 					}).catch(err=>{
@@ -253,12 +255,21 @@
 				this.curPathIndex = this.curPath.length-1
 				this.curlist = item.children
 			},
-			// 根据parent_id获取对应文件列表
+			// 根据parent_id获取对应节点的children
 			getFileListById(pid){
-				if(pid == -1){
-					return this.filelist
+				if(pid == -1) return this.filelist
+				for(const list of this.filelist){
+					if(list.id == pid)
+						return list.children
 				}
-				// TODO: 实现根据id从filelist找到对应id的children
+				if(list.children && list.children.length > 0 ){
+					const foundList = this.getFileListById(list.children,pid)
+					if(foundList){
+						return foundList.children
+					}
+					
+				}
+				return null
 			},
 			// 点击导航栏进入目录
 			navigateTo(item){
@@ -266,6 +277,8 @@
 				if(i == this.curIndex) return
 				this.curPathIndex = i
 				this.curlist = this.getFileListById(item.id)
+				console.log("pid",item.id)
+				console.log(this.curlist)
 				this.curPath.splice(i+1)
 			},
 			// 返回上一级
