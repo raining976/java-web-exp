@@ -33,6 +33,10 @@
 	{
 	--bs-table-bg-state: #ececec;
 }
+
+.table-hover tbody tr.isHovering>td, .table-hover tbody tr.isHovering {
+	--bs-table-bg-state: #C3DAFF;
+}
 </style>
 <body>
 	<div id="filelist">
@@ -126,7 +130,8 @@
 						@dragstart="onDragStart(index)"
 						@click="onFileClick(index, $event)" @dragend="onDragEnd(index)"
 						@drop="drop($event,index)" @dragover="dragOver($event,index)"
-						:class="{selectActive: item.selected == true}">
+						@dragleave="dragLeave(item)"
+						:class="{selectActive: item.selected == true ,isHovering: item.isHovering}">
 						<td><i :class="icons[item.typeIndex]"></i> {{item.name}}</td>
 						<td>{{item.type}}</td>
 						<td>{{item.size}}</td>
@@ -233,7 +238,9 @@
 			      	const children = this.handlerFileList(list, item.id);
 			      	item.children = children
 			      	item.typeIndex = this.type2iconNum(item.type)
-			      	item.selected = false;
+			      	item.selected = false; // 是否被选择 （多选使用）
+			      	item.isHovering = false; //  是否拖到了当前文件夹上
+			      	// 文件大小带单位 如果 不到1m就显示 kb 到了1m显示mb
 			      	item.size = item.size/1024
 			      	if(item.size > 1024){
 			      		item.size = (item.size/1024).toFixed(1) + "MB"
@@ -341,19 +348,29 @@
 			},
 			// 开始拖动文件的起始索引
 			onDragStart(index){
-				console.log(this.curlist[index].name)
 				this.curSelectIndex = index
 			},
-			 dragOver(event, index) {
-			      event.preventDefault();
-			    },
+			// 拖动过程
+			dragOver(event, index) {
+				const item = this.curlist[index]
+			    if(item.type == "folder"){
+			    	item.isHovering = true
+			    }
+				event.preventDefault() // 要阻止默认事件drop才能生效
+			},
+			// 离开后让取消样式
+			dragLeave(item){
+				item.isHovering = false    	
+			},
+			// 释放时
 			drop(event, index) {
 		     	event.preventDefault();
 		     	const draggedIndex = this.curSelectIndex
 		      	const draggedItem = this.curlist[draggedIndex];
 		      	const targetItem = this.curlist[index];
-		      
-		     	if (targetItem.type === 'folder') {
+		      	targetItem.isHovering = false;
+		      	if(draggedIndex==index) return 
+		     	if (targetItem.type === 'folder' ) {
 			        // 将拖拽的文件或文件夹放入目标文件夹中
 			        targetItem.children.push(draggedItem);
 			     	// TODO: 请求更新
@@ -368,11 +385,12 @@
 			      		alert("出错啦")
 			      		console.log(err)
 			      	})
-			      	window.location.reload();
+			      	// window.location.reload();
+			     	// 从原位置删除拖拽的文件或文件夹
+			      	this.curlist.splice(draggedIndex, 1);
 		     	}
 		      
-		      	// 从原位置删除拖拽的文件或文件夹
-		      	this.curlist.splice(draggedIndex, 1);
+		      	
 		      	
 			},
 			// 结束拖动
