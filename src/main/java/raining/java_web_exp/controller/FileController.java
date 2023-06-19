@@ -92,5 +92,13 @@ public class FileController {
 		return ResponseEntity.status(HttpStatus.CONFLICT).body("创建失败啦！");
 	}
 	
+	
+	// 修改文件（目录的）位置
+	@GetMapping("/changeFilePosition")
+	public ResponseEntity<String> changeFilePosition(@RequestParam("id") int id ,@RequestParam("pid") int pid, @CookieValue("USER_ID") String username){
+		int userId = conn.getUserByUsername(username).getId();
+		if(conn.changeFilePid(id, userId, pid)) return ResponseEntity.ok("修改成功啦");
+		return ResponseEntity.status(HttpStatus.CONFLICT).body("修改失败啦！");
+	}
 
 }

@@ -175,4 +175,15 @@ public class Conn {
 		}
 		return filelist;
 	}
+	
+	// 修改文件的parent id
+	public boolean changeFilePid(int id,int userId,int pid) {
+		LocalDateTime now = LocalDateTime.now(); // 获取当前时间
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yy-MM-dd HH:mm:ss"); // 创建日期时间格式化器
+		String formattedDateTime = now.format(formatter); // 格式化当前时间为字符串
+		String strSql = "update file set parent_id = '"+pid+"' where user_id = '"+userId+"' and id = '"+id+"'";
+		String updateSql = "update file set updated='"+formattedDateTime+"' where id = '"+pid+"'";
+		this.UpdateSQL(updateSql);
+		return this.UpdateSQL(strSql);
+	}
 }
