@@ -201,7 +201,7 @@
 			// 如果有缓存 加载缓存的文件列表
 			
 			let curPathCach = JSON.parse(localStorage.getItem("curPath"))
-			if(curPathCach && curPathCach.length > 1){
+			if(curPathCach){
 				this.curPath = curPathCach
 				this.curlist = this.findChildren(curPathCach[curPathCach.length-1].id)
 			}else{
@@ -251,7 +251,8 @@
 				form.append("type",this.newFileForm.type)
 				axios.post("/file/newFile",form).then(res=>{
 					if(res.status == 200){
-						alert(res.data)
+						console.log(res)
+						this.refresh()
 					}
 				}).catch(err=>{
 					if(err.response.status == 409){
@@ -275,13 +276,18 @@
 			      	item.selected = false; // 是否被选择 （多选使用）
 			      	item.isHovering = false; //  是否拖到了当前文件夹上
 			      	// 文件大小带单位 如果 不到1m就显示 kb 到了1m显示mb
-			      	item.size = item.size/1024
-			      	if(item.size > 1024){
-			      		item.size = (item.size/1024).toFixed(1) + "MB"
-			      	}else if(item.size < 1024 && item.size > 0){
-			      		item.size = (item.size).toFixed(1) + "KB"
-			      	}else{
-			      		item.size = "-"
+			      	if(item.size < 100){
+			      		item.size = item.size + "bytes"
+			      	} else {
+			      		item.size = item.size/1024
+			      		if(item.size > 1024){
+				      		item.size = item.size/1024
+				      		item.size = (item.size/1024).toFixed(1) + "MB"
+				      	}else if(item.size < 1024 && item.size > 0){
+				      		item.size = (item.size).toFixed(1) + "KB"
+				      	}else{
+				      		item.size = "-"
+				      	}
 			      	}
 			      	result.push(item);
 			    	}
@@ -371,6 +377,7 @@
 			      .then(response => {
 			        // 处理上传成功的响应
 			        console.log(response.data);
+			        this.refresh()
 			      })
 			      .catch(error => {
 			        // 处理上传失败的错误
@@ -441,7 +448,7 @@
 		      		}
 		      	}).then(res=>{
 		      		if(res.status == 200){
-		      			window.location.reload()
+		      			this.refresh()
 		      		}
 		      		console.log(res)
 		      	}).catch(err=>{
@@ -504,6 +511,9 @@
 		          this.isCmdPressed = false;
 		        }
 		   	},
+		   	refresh(){
+		   		window.location.reload()
+		   	}
 			
 		},
 
