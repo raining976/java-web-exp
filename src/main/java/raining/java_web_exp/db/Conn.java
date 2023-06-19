@@ -67,7 +67,12 @@ public class Conn {
 		System.out.println("Database Closed.");
 	}
 
-	// 查询操作封装
+	/**
+	 * 封装查询操作
+	 * @param sql sql语句
+	 * @return
+	 * @throws SQLException
+	 */
 	public ResultSet SelectedSql(String sql) throws SQLException {
 		if (sql == null || sql.equals(" "))
 			return null;
@@ -77,6 +82,11 @@ public class Conn {
 		return rs;
 	}
 
+	/**
+	 * 封装执行update insert语句的函数 
+	 * @param sql sql语句
+	 * @return
+	 */
 	public boolean UpdateSQL(String sql) {
 		boolean flag = false;
 		try {
@@ -90,7 +100,12 @@ public class Conn {
 
 	}
 
-	// 通过用户名获取用户信息
+	/**
+	 * 通过用户名获取用户的model
+	 * @author raining
+	 * @param name 用户名
+	 * @return
+	 */
 	public User getUserByUsername(String name) {
 
 		User user = null;
@@ -112,7 +127,12 @@ public class Conn {
 		return user;
 	}
 
-	// 注册新用户
+	/**
+	 * 注册用户
+	 * @author raining
+	 * @param user 用户model
+	 * @return
+	 */
 	public boolean registerUser(User user) {
 		if (this.getUserByUsername(user.getUsername()) == null) {
 			String str = "insert into user (name, password, img_url, create_date) VALUES ('" + user.getUsername()
@@ -123,7 +143,17 @@ public class Conn {
 		return false;
 	}
 
-	// 上传文件信息到数据库
+	/**
+	 * 将文件信息存入数据库
+	 * @author raining
+	 * @param name 文件名
+	 * @param type 文件类型
+	 * @param size 文件大小
+	 * @param filePath 文件路径
+	 * @param pid 父id
+	 * @param userId 用户id
+	 * @return
+	 */
 	public boolean uploadFile(String name,String type,Long size,String filePath, int pid, int userId) {
 		LocalDateTime now = LocalDateTime.now(); // 获取当前时间
 		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yy-MM-dd HH:mm:ss"); // 创建日期时间格式化器
@@ -134,7 +164,14 @@ public class Conn {
 		return this.UpdateSQL(strSql);
 	}
 
-	// 创建文件夹
+	/**
+	 * 将创建的文件夹信息存储数据库
+	 * @author raining
+	 * @param name 文件名
+	 * @param pid parent_id
+	 * @param userId 用户id
+	 * @return
+	 */
 	public boolean uploadFolder(String name, int pid, int userId) {
 		LocalDateTime now = LocalDateTime.now(); // 获取当前时间
 		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yy-MM-dd HH:mm:ss"); // 创建日期时间格式化器
@@ -144,10 +181,15 @@ public class Conn {
 		return false;
 	}
 
-	// 根据user id 和 parent id 获取 文件列表
+	/**
+	 * 获取当前用户的所有列表
+	 * @author raining
+	 * @param userId 用户id
+	 * @return
+	 */
 	public List<FileEntity> getByUserIdAndParentId(int userId) {
 		List<FileEntity> filelist = new ArrayList<FileEntity>();
-		String strSql = "select * from file where user_id = '" + userId + "'";
+		String strSql = "select * from file where user_id = '" + userId + "' and status = 0";
 		try {
 			rs = this.SelectedSql(strSql);
 			while (rs.next()) {
@@ -170,7 +212,13 @@ public class Conn {
 		return filelist;
 	}
 	
-	// 修改文件的parent id
+	/**
+	 * 更改文件位置 实际上是更新文件的pid
+	 * @param id 文件 id
+	 * @param userId 用户 id
+	 * @param pid parent id
+	 * @return
+	 */
 	public boolean changeFilePid(int id,int userId,int pid) {
 		LocalDateTime now = LocalDateTime.now(); // 获取当前时间
 		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yy-MM-dd HH:mm:ss"); // 创建日期时间格式化器
@@ -179,5 +227,16 @@ public class Conn {
 		String updateSql = "update file set updated='"+formattedDateTime+"' where id = '"+pid+"'";
 		this.UpdateSQL(updateSql);
 		return this.UpdateSQL(strSql);
+	}
+	
+	/**
+	 * 用 update 修改status代替彻底删除操作，更安全 
+	 * @param id 文件/文件夹 id
+	 * @param uid 用户 id
+	 * @return 
+	 */
+	public boolean delFiles(int id,int uid) {
+		String str = "update file set status = 1 where id = '"+id+"' and user_id = '"+uid+"'";
+		return this.UpdateSQL(str);
 	}
 }

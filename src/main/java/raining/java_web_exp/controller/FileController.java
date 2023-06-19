@@ -147,5 +147,15 @@ public class FileController {
 			return ResponseEntity.ok("修改成功啦");
 		return ResponseEntity.status(HttpStatus.CONFLICT).body("修改失败啦！");
 	}
+	
+	@GetMapping("delFiles")
+	public ResponseEntity<String> delFiles(@RequestParam("id") int id , @CookieValue("USER_ID") String username){
+		if(username == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("没有登陆哦");
+		int userId = conn.getUserByUsername(username).getId();
+		if(conn.delFiles(id, userId)) {
+			return ResponseEntity.ok("删除成功！");
+		}
+		return  ResponseEntity.status(HttpStatus.CONFLICT).body("删除失败啦！");
+	}
 
 }
