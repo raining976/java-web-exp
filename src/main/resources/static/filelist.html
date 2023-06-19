@@ -494,11 +494,50 @@
 		    },
 		    // 删除文件
 		    delFiles(){
-		  		alert("开发中。。。")
-		    	// TODO: 删除文件
+		  		// alert("开发中。。。")
 		    	// 如果时文件夹 那么要删除这个文件夹下所有的 文件 或 文件夹
+		    	var ids = []
+		    	this.selectedIds.forEach(id=>{
+		    		let res = this.findChildren(id)
+		    		ids.push(id)
+		    		if(res.length > 0)
+		    			ids = ids.concat(this.findIdsWithChildren(res))
+		    		// 最后再将本地的移除 不强制刷新是为了 提高用户体验 避免删除出问题时不提示用户
+ 		    		const index = this.curlist.findIndex(obj => obj.id === id);
+		    		if (index !== -1) {
+		    		    this.curlist.splice(index, 1);
+		    		}
+		    	})
+		    	ids.forEach(id=>{
+		    		this.delFileRequest(id)
+		    	})
+		    	// this.refresh()
 		    },
-		    
+		    // 找到该对象下所有的元素id
+		    findIdsWithChildren(objects) {
+	    	  	let ids = [];
+	    	  	for (let obj of objects) {
+		    	    ids.push(obj.id);
+		    	    if (obj.children && obj.children.length > 0) {
+		    	      	let childIds = this.findIdsWithChildren(obj.children);
+		    	      	ids = ids.concat(childIds);
+		    	    }
+	    	  	}
+	    	  	return ids;
+	    	},
+		    // 删除文件的请求
+		    delFileRequest(id){
+	    		axios("/file/delFiles",{
+	    			params:{
+	    				id:id
+	    			}
+	    		}).then(res=>{
+	    			console.log(res.data)
+	    		}).catch(err=>{
+	    			alert("删除失败啦！")
+	    			console.log(err)
+	    		})
+	    	},
 		    onKeyDown(event) {
 		        if (event.key === 'Meta' || event.key === 'Control') {
 		          // Command键按下时设置isCommandPressed为true
