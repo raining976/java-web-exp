@@ -1,5 +1,4 @@
 package raining.java_web_exp.model;
-import javax.persistence.*;
 
 public class User {
     private int id;

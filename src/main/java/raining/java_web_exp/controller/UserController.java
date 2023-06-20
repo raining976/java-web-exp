@@ -29,10 +29,10 @@ public class UserController {
 		if (userEntity != null && userEntity.getPassword().equals(formPass)) {
 			session.setAttribute("USER_INFO", userEntity);
 			Cookie cookie = new Cookie("USER_ID", user.getUsername());
-			int maxAge = 10 * 60;
+			int maxAge = 60 * 60 * 24 * 30; // 有效期一个月
 			cookie.setMaxAge(maxAge); // 有效期
 			cookie.setPath("/"); // 设置Cookie的作用范围为整个应用程序
-			Cookie expireCookie = new Cookie("MAX_AGE", "600"); // 过期时间的cookie
+			Cookie expireCookie = new Cookie("MAX_AGE", Integer.toString(maxAge)); // 过期时间的cookie
 			expireCookie.setMaxAge(maxAge); // 有效期
 			expireCookie.setPath("/"); // 设置Cookie的作用范围为整个应用程序
 			res.addCookie(cookie);
