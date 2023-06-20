@@ -155,9 +155,7 @@ public class Conn {
 	 * @return
 	 */
 	public boolean uploadFile(String name,String type,Long size,String filePath, int pid, int userId) {
-		LocalDateTime now = LocalDateTime.now(); // 获取当前时间
-		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yy-MM-dd HH:mm:ss"); // 创建日期时间格式化器
-		String formattedDateTime = now.format(formatter); // 格式化当前时间为字符串
+		String formattedDateTime = this.getNowDate();
 		String strSql = "insert into file (user_id, parent_id,name,type,size,path,updated) values('" + userId + "','"
 				+ pid + "','" + name + "','" + type + "','" + size + "','" + filePath + "','" + formattedDateTime
 				+ "')";
@@ -173,9 +171,7 @@ public class Conn {
 	 * @return
 	 */
 	public boolean uploadFolder(String name, int pid, int userId) {
-		LocalDateTime now = LocalDateTime.now(); // 获取当前时间
-		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yy-MM-dd HH:mm:ss"); // 创建日期时间格式化器
-		String formattedDateTime = now.format(formatter); // 格式化当前时间为字符串
+		String formattedDateTime = this.getNowDate();
 		String strSql = "insert into file (user_id,parent_id,name,type,size,path,updated) values ('"+userId+"','"+pid+"','"+name+"','folder',0,'-','"+formattedDateTime+"')";
 		if(this.UpdateSQL(strSql)) return true;
 		return false;
@@ -220,9 +216,7 @@ public class Conn {
 	 * @return
 	 */
 	public boolean changeFilePid(int id,int userId,int pid) {
-		LocalDateTime now = LocalDateTime.now(); // 获取当前时间
-		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yy-MM-dd HH:mm:ss"); // 创建日期时间格式化器
-		String formattedDateTime = now.format(formatter); // 格式化当前时间为字符串
+		String formattedDateTime = this.getNowDate();
 		String strSql = "update file set parent_id = '"+pid+"' where user_id = '"+userId+"' and id = '"+id+"'";
 		String updateSql = "update file set updated='"+formattedDateTime+"' where id = '"+pid+"'";
 		this.UpdateSQL(updateSql);
@@ -266,5 +260,27 @@ public class Conn {
 			e.printStackTrace();
 		}
 		return fileEntity;
+	}
+	
+	/**
+	 * 根据id更改文件的更新时间
+	 * @param id 文件id
+	 * @param userId 用户ID
+	 * @return
+	 */
+	public boolean changeUpdatedById(int id,int userId) {
+		String str = "update file set updated = '"+this.getNowDate()+"' where id = '"+id+"' and user_id = '"+userId+"'";
+		return this.UpdateSQL(str);
+	}
+	
+	/**
+	 * 获取当前时间
+	 * @return
+	 */
+	public String getNowDate() {
+		LocalDateTime now = LocalDateTime.now(); // 获取当前时间
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yy-MM-dd HH:mm:ss"); // 创建日期时间格式化器
+		return now.format(formatter); // 格式化当前时间为字符串
+	
 	}
 }
