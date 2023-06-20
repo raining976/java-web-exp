@@ -76,7 +76,7 @@
 					axios.post("/user/register",this.user).then(res=>{
 						if(res.status == 200){
 							alert("注册成功")
-							/* window.location.href = "/login.html" */
+							window.location.href = "/login.html"
 						}
 						else{
 							alert(res.message)

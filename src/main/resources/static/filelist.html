@@ -85,7 +85,7 @@
 							<ul class="dropdown-menu dropdown-menu-end">
 								<li><a href="userinfo.html" class="dropdown-item"
 									type="button">我的资料</a></li>
-								<li><button class="dropdown-item" type="button">Logout</button></li>
+								<li><button class="dropdown-item" type="button" @click="logout">Logout</button></li>
 							</ul>
 						</div>
 					</div>
@@ -191,7 +191,7 @@
 					<!-- 模态框的底部 -->
 					<div class="modal-footer">
 					 <button type="button" id="closeModal"  class="btn btn-primary"
-							data-bs-dismiss="modal" @click="closeModal">保存</button>
+							data-bs-dismiss="modal" @click="closeModal" v-show="!isObject">保存</button>
 					 </div>
 				</div>
 			</div>
@@ -252,19 +252,27 @@
         		return this.selectedIds.length > 0
         	}	
         },
-        async created(){        	
-			await this.getFileList()
-			// 如果有缓存 加载缓存的文件列表
+        
+        async created(){ 
+        	if(!this.handlerLogin()){
+        		alert("未登陆，请先登陆")
+        		window.location.href = "/login.html"
+        	}else{
+        		await this.getFileList()
+    			// 如果有缓存 加载缓存的文件列表
+    			
+    			let curPathCach = JSON.parse(localStorage.getItem("curPath"))
+    			if(curPathCach){
+    				this.curPath = curPathCach
+    				this.curlist = this.findChildren(curPathCach[curPathCach.length-1].id)
+    			}else{
+    				this.curlist = this.filelist
+    			}
+        	}
 			
-			let curPathCach = JSON.parse(localStorage.getItem("curPath"))
-			if(curPathCach){
-				this.curPath = curPathCach
-				this.curlist = this.findChildren(curPathCach[curPathCach.length-1].id)
-			}else{
-				this.curlist = this.filelist
-			}
 		},
 		mounted() {
+			console.log(localStorage.getItem("USER_ID"))
 		    // 监听全局的键盘按下和释放事件
 		    window.addEventListener('keydown', this.onKeyDown);
 		    window.addEventListener('keyup', this.onKeyUp);
@@ -277,23 +285,38 @@
 		    
 		},
 		methods:{
+			// 判断是否已经登陆 并处理cookie信息
+        	handlerLogin(){
+				var userID = this.getCookieValue("USER_ID")
+				if(userID == null){
+	        		return false
+	        	}else{
+	        		this.username = userID
+	        	} 
+				return true
+        	},
+        	// 根据cookieName获取cookie的value
+			getCookieValue(cookieName){
+				const cookies = document.cookie.split(";")
+				console.log("cookies:",cookies)
+				var res = null;
+				cookies.forEach(item=>{
+					if(item.includes(cookieName) == true){
+						res = item.split("=")[1]
+					}
+				})
+				return res
+			},
 			// 获取文件列表
 			// 要处理异步
 		 	async getFileList(){
-				let username = localStorage.getItem("USER_ID")
-				if(username != null){
-					this.username = username
-					await axios.get("/file/filelist").then(res=>{
-						this.filelist = this.handlerFileList(res.data,-1)
-						// console.log(this.filelist)
-					}).catch(err=>{
-						alert("出错了哦")
-						console.log(err)
-					})
-				}else{
-					alert("您还未登陆哦")
-					window.location.href = "/login.html"
-				}
+				await axios.get("/file/filelist").then(res=>{
+					this.filelist = this.handlerFileList(res.data,-1)
+					// console.log(this.filelist)
+				}).catch(err=>{
+					alert("出错了哦")
+					console.log(err)
+				})
 				
 			},
 			// 新建目录或文件
@@ -404,8 +427,9 @@
 					  	const contentType = response.headers['content-type'];
 					    const fileData = new Blob([response.data], { type: contentType });
 						const url = URL.createObjectURL(fileData);
+						console.log(url)
 						this.curOpenType = contentType //  保存当前文件类型 用于做绑定按键的选择性判断
-						console.log(contentType)
+						// console.log(contentType)
 						if(contentType.includes("text")) this.editingFileId = id
 						this.hanlerFileData(contentType,fileData,url) // 根据不同的文件类型做出处理
 					})
@@ -723,6 +747,18 @@
 		   			console.log(res)
 		   		})
 		   	},
+		   	logout(){
+        		var cookies = document.cookie.split(";");
+
+        		for (var i = 0; i < cookies.length; i++) {
+        		  var cookie = cookies[i];
+        		  var eqPos = cookie.indexOf("=");
+        		  var name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
+        		  document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
+        		}
+        		localStorage.clear()
+        		window.location.reload()
+        	},
 		   	refresh(){
 		   		window.location.reload()
 		   	}

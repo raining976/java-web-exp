@@ -253,6 +253,13 @@ public class FileController {
 		}
 	}
 
+	/**
+	 * 保存修改后的文本文件
+	 * @param id 文件id
+	 * @param content 文件内容
+	 * @param username 用户名
+	 * @return
+	 */
 	@PostMapping("/saveChanges")
 	public ResponseEntity<String> saveChanges(@RequestParam("id") int id, @RequestParam("content") String content,
 			@CookieValue("USER_ID") String username) {

@@ -78,9 +78,22 @@
 			this.getUserInfo()	
 		},
 		methods:{
+        	// 根据cookieName获取cookie的value
+			getCookieValue(cookieName){
+				const cookies = document.cookie.split(";")
+				console.log("cookies:",cookies)
+				var res = null;
+				cookies.forEach(item=>{
+					if(item.includes(cookieName) == true){
+						res = item.split("=")[1]
+					}
+				})
+				return res
+			},
+			
 			getUserInfo(){
 				// 判断当前是否登陆
-				let username = localStorage.getItem("USER_ID")
+				let username = this.getCookieValue("USER_ID")
 				if(username != null){
 					this.username = username
 					axios.get("user/info",{

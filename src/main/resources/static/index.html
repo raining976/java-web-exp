@@ -40,7 +40,7 @@
 							<ul class="dropdown-menu dropdown-menu-end">
 								<li><a href="userinfo.html" class="dropdown-item"
 									type="button">我的资料</a></li>
-								<li><button class="dropdown-item" type="button">Logout</button></li>
+								<li><button class="dropdown-item" type="button" @click="logout">Logout</button></li>
 							</ul>
 						</div>
 					</div>
@@ -76,10 +76,22 @@
         	this.handlerLogin()
         },
         methods: {
+        	logout(){
+        		var cookies = document.cookie.split(";");
+
+        		for (var i = 0; i < cookies.length; i++) {
+        		  var cookie = cookies[i];
+        		  var eqPos = cookie.indexOf("=");
+        		  var name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
+        		  document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
+        		}
+        		localStorage.clear()
+        		window.location.reload()
+        	},
         	// 根据cookieName获取cookie的value
 			getCookieValue(cookieName){
 				const cookies = document.cookie.split(";")
-				console.log("cookies:",cookies)
+				// console.log("cookies:",cookies) 
 				var res = null;
 				cookies.forEach(item=>{
 					if(item.includes(cookieName) == true){
@@ -92,12 +104,13 @@
         	handlerLogin(){
 				var userID = this.getCookieValue("USER_ID")
 				var maxAge = parseInt(this.getCookieValue("MAX_AGE"))*1000
-				this.storeCookie(userID,maxAge)
 				if(userID == null){
 	        		alert("未登陆，请先登陆")
 	        		window.location.href = "/login.html"
 	        	}else{
+	        		this.storeCookie(userID,maxAge)
 	        		this.username = userID
+	        		// console.log(localStorage.getItem("USER_ID"))
 	        	} 
         	},
         	// 将userid存储到本地并定时清空 
