@@ -185,7 +185,7 @@ public class FileController {
 	 * @param usename 用户名
 	 * @return
 	 */
-	
+
 	@GetMapping("/fileData")
 	public ResponseEntity<byte[]> getFileData(@RequestParam("id") int id, @CookieValue("USER_ID") String usename) {
 		int userId = conn.getUserByUsername(usename).getId();
@@ -195,32 +195,36 @@ public class FileController {
 		}
 		String filename = fileEntity.getName();
 		Path filePath = Paths.get(uploadDirPath, filename);
-        Resource resource = new FileSystemResource(filePath);
+		Resource resource = new FileSystemResource(filePath);
 
-        if (resource.exists() && resource.isReadable()) {
-            byte[] fileData;
+		if (resource.exists() && resource.isReadable()) {
+			byte[] fileData;
 			try {
 				fileData = Files.readAllBytes(filePath);
 				HttpHeaders headers = new HttpHeaders();
-	            headers.setContentType(getMediaType(filename));
-	            headers.set("Content-Disposition", "attachment; filename=\"" + filename + "\"");
-	            headers.set("Content-Disposition", "inline; filename=\"" + filename + "\"");
+				headers.setContentType(getMediaType(filename));
+				headers.set("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+				headers.set("Content-Disposition", "inline; filename=\"" + filename + "\"");
 
-	            return ResponseEntity.ok()
-	                    .headers(headers)
-	                    .body(fileData);
+				return ResponseEntity.ok().headers(headers).body(fileData);
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 
-            
-        }
-        // 文件不存在或无法读取时返回404
-        return ResponseEntity.notFound().build();
+		}
+		// 文件不存在或无法读取时返回404
+		return ResponseEntity.notFound().build();
 
 	}
 
+	/**
+	 * 根据文件名的后缀返回文件类型
+	 * 
+	 * @author raining
+	 * @param filename 文件名
+	 * @return
+	 */
 	private MediaType getMediaType(String filename) {
 		String extension = filename.substring(filename.lastIndexOf(".") + 1);
 		switch (extension.toLowerCase()) {
@@ -243,10 +247,31 @@ public class FileController {
 		case "mp4":
 			return MediaType.valueOf("video/mp4");
 		case "mp3":
-			return  MediaType.valueOf("audio/mpeg");
+			return MediaType.valueOf("audio/mpeg");
 		default:
 			return MediaType.APPLICATION_OCTET_STREAM;
 		}
+	}
+
+	@PostMapping("/saveChanges")
+	public ResponseEntity<String> saveChanges(@RequestParam("id") int id, @RequestParam("content") String content,
+			@CookieValue("USER_ID") String username) {
+		int userId = conn.getUserByUsername(username).getId();
+		FileEntity fileEntity = conn.getFileById(id, userId);
+		
+		String filePath = uploadDirPath + fileEntity.getName(); // 替换为实际的文件路径
+
+        try (FileWriter writer = new FileWriter(filePath, false)) {
+            writer.write(content);
+            writer.flush();
+            if (conn.changeUpdatedById(id, userId))
+    			return ResponseEntity.ok("修改成功啦");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+		
+		return ResponseEntity.status(HttpStatus.CONFLICT).body("修改失败啦");
+
 	}
 
 }
