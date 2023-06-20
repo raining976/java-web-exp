@@ -4,15 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>FileList</title>
-<link
-	href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
-	rel="stylesheet"
-	integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM"
-	crossorigin="anonymous">
+<link rel="stylesheet"
+	href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
 <script
-	src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
-	integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz"
-	crossorigin="anonymous"></script>
+	src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
 <link rel="stylesheet"
@@ -36,6 +31,21 @@
 
 .table-hover tbody tr.isHovering>td, .table-hover tbody tr.isHovering {
 	--bs-table-bg-state: #C3DAFF;
+}
+
+#myModal {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100vw;
+	height: 100vh;
+}
+
+.objEleClass {
+	width: 100%;
+	height: 100%;
+	max-width: 100%;
+	max-height: 100%;
 }
 </style>
 <body>
@@ -75,7 +85,8 @@
 			<form class="row">
 				<label for="formFileMultiple" class="form-label">上传文件到当前目录(可上传多个)</label>
 				<div class="col-auto" style="width: 377px; padding-right: 0">
-					<input class="form-control" type="file" ref="fileInput" multiple>
+					<input class="form-control" type="file" ref="fileInput" multiple
+						required>
 				</div>
 				<div class="col-auto">
 					<button class="btn btn-primary mb-3" @click="uploadFiles"
@@ -88,7 +99,7 @@
 				<div class="col-auto">
 					<label for="filename" class="visually-hidden">名称</label> <input
 						type="text" class="form-control" v-model="newFileForm.name"
-						placeholder="名称">
+						placeholder="名称" required>
 				</div>
 				<select class="form-select form-select-sm"
 					style="width: 150px; height: 38px"
@@ -146,6 +157,30 @@
 				</tbody>
 			</table>
 		</div>
+		<button type="button" class="btn btn-primary" data-bs-toggle="modal"
+			data-bs-target="#myModal" style="display: none" id="openModal"
+			@click="openModal">打开模态框</button>
+		<div class="modal fade" id="myModal">
+			<div class="modal-dialog modal-xl" style="width: 100%; height: 100%">
+				<div class="modal-content" style="width: 100%; height: 100%">
+					<!-- 模态框的标题 -->
+					<div class="modal-header">
+						<h5 class="modal-title"></h5>
+						<button type="button" id="closeModal" class="btn-close" data-bs-dismiss="modal"
+							aria-label="关闭" @click="closeModal"></button>
+					</div>
+
+					<!-- 模态框的主体内容 -->
+					<div class="modal-body" id="obj-container">
+
+						<!-- <object :data="resourceUrl" :type="contentType" style="width:100%;height:100%"></object> -->
+					</div>
+
+					<!-- 模态框的底部 -->
+					<div class="modal-footer"></div>
+				</div>
+			</div>
+		</div>
 
 	</div>
 	<script>
@@ -160,6 +195,9 @@
         	selectedIndexes:[], //  存储选中文件的索引
         	curSelectIndex:-1, // 当前选中文件的索引 
         	isHoveringGoBack:false, // 将文件移动到上一级的悬停
+        	resourceUrl:"", // 数据源
+        	contentType:"", // 数据类型
+        	curOpenType:"", // 当前打开的文件类型
         	options:[
         		{
         			label:"目录",
@@ -217,6 +255,7 @@
 		    // 移除全局的事件监听
 		    window.removeEventListener('keydown', this.onKeyDown);
 		    window.removeEventListener('keyup', this.onKeyUp);
+		
 		    
 		},
 		methods:{
@@ -276,19 +315,19 @@
 			      	item.selected = false; // 是否被选择 （多选使用）
 			      	item.isHovering = false; //  是否拖到了当前文件夹上
 			      	// 文件大小带单位 如果 不到1m就显示 kb 到了1m显示mb
-			      	if(item.size < 100){
-			      		item.size = item.size + "bytes"
-			      	} else {
-			      		item.size = item.size/1024
-			      		if(item.size > 1024){
-				      		item.size = item.size/1024
-				      		item.size = (item.size/1024).toFixed(1) + "MB"
-				      	}else if(item.size < 1024 && item.size > 0){
-				      		item.size = (item.size).toFixed(1) + "KB"
-				      	}else{
-				      		item.size = "-"
-				      	}
+			   		let size = item.size
+			      	if(size < 100 && size > 0){
+			      		item.size = size + "B"
+			      	}else if(size >= 100 && size < 1024*500){
+			      		item.size = (size/1024).toFixed(1) + "KB"
+			      	}else if(size >= 1024*500){
+			      		item.size = (size/1024/1024).toFixed(1) + "MB"
+			      	}else {
+			      		item.size = "-"
 			      	}
+			      	
+			      	
+			      	
 			      	result.push(item);
 			    	}
 			  	}
@@ -319,15 +358,73 @@
 					
 				} */
 			},
-			// 双击打开文件夹
+			// 双击打开文件/文件夹
 			openFolder(item){
-				if(item.typeIndex!=0) return
+				// 如果 是文件
+				if(item.typeIndex!=0) {
+					this.getFileDataRequest(item.id)
+					return 
+				}
 				this.curPath.push({
 					id:item.id,
 					name:item.name
 				})
 				this.curPathIndex = this.curPath.length-1
 				this.curlist = item.children
+			},
+			// 获取文件数据的请求
+			getFileDataRequest(id){
+				axios.get('/file/fileData',{
+					params:{ id: id },
+				   	responseType: 'blob'
+				})
+				  .then(response => {
+					  	const contentType = response.headers['content-type'];
+					    const fileData = new Blob([response.data], { type: contentType });
+						const url = URL.createObjectURL(fileData);
+
+						this.curOpenType = contentType
+						console.log(contentType)
+						var objEle = document.createElement('object');
+						// 设置属性和内容
+						objEle.data = url;
+						objEle.type = contentType;
+						objEle.classList.add("objEleClass")
+						document.getElementById("obj-container").innerHTML = '';
+						document.getElementById("obj-container").append(objEle)
+						document.getElementById("openModal").click()
+						
+					})
+				  .catch(error => {
+					 alert("出错啦！")
+				    console.error('获取文件数据失败:', error);
+				  });
+			},
+			hanlerFileData(contentType,fileData){
+				 // 根据文件类型选择合适的处理方式
+			    if (contentType.includes('image/')) {
+			      // 图片类型
+			      const imageUrl = URL.createObjectURL(fileData);
+			      console.log(imageUrl)
+			      // 在合适的容器中展示图片
+			      // 例如：document.getElementById('image-container').src = imageUrl;
+			      document.getElementById('image-container').src = imageUrl;
+			    } else if (contentType.includes('video/')) {
+			      // 视频类型
+			      const videoUrl = URL.createObjectURL(fileData);
+			      // 在合适的容器中播放视频
+			      // 例如：document.getElementById('video-container').src = videoUrl;
+			    } else if (contentType.includes('audio/')) {
+			      // 音频类型
+			      const audioUrl = URL.createObjectURL(fileData);
+			      // 在合适的容器中播放音频
+			      // 例如：document.getElementById('audio-container').src = audioUrl;
+			    } else {
+			      // 其他文件类型
+			      // 在合适的容器中展示文件名或提供下载链接
+			      // 例如：document.getElementById('file-container').textContent = 'example.jpg';
+			      // 或：document.getElementById('download-link').href = URL.createObjectURL(fileData);
+			    }
 			},
 			// 根据parent_id获取对应节点的children
 			findChildren(pid){
@@ -367,7 +464,7 @@
 				const files = fileInput.files
 				if(files.length == 0) return
 				const formData = new FormData()
-				
+				// console.log(files)
 				for(let i = 0; i < files.length; i++){
 					formData.append("files",files[i])
 				}
@@ -511,6 +608,7 @@
 		    	ids.forEach(id=>{
 		    		this.delFileRequest(id)
 		    	})
+		    	this.selectedIds = []
 		    	// this.refresh()
 		    },
 		    // 找到该对象下所有的元素id
@@ -550,6 +648,24 @@
 		          this.isCmdPressed = false;
 		        }
 		   	},
+		   	// 打开模态框时
+		   	openModal(){
+		   	 	window.addEventListener('keydown',this.keyDownCloseModal)
+		   	},
+		   	// 关闭模态框时
+		   	closeModal(){
+		   	    window.removeEventListener('keydown', this.keyDownCloseModal);
+		   	},
+		   	// 按键绑定事件
+		   	keyDownCloseModal(e){
+		   		const type = this.curOpenType;
+		   		let flag = !type.includes("video") && !type.includes("audio") && e.code == "Space" 
+		   		if(flag) e.preventDefault()
+		   		if(e.code == "Escape" || flag){
+   	 				document.querySelector("#closeModal").click()
+   	 			}
+			   	
+		   	},
 		   	refresh(){
 		   		window.location.reload()
 		   	}
@@ -560,6 +676,5 @@
 		
     });
 	</script>
-
 </body>
 </html>
