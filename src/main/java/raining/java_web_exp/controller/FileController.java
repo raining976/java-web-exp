@@ -6,14 +6,18 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.CookieValue;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -21,7 +25,14 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.DefaultResourceLoader;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.util.FileCopyUtils;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 
 import jakarta.servlet.http.HttpSession;
 import raining.java_web_exp.db.Conn;
@@ -29,6 +40,7 @@ import raining.java_web_exp.model.FileEntity;
 import raining.java_web_exp.model.User;
 
 @RestController
+@CrossOrigin(origins = "*")
 @RequestMapping("/file")
 public class FileController {
 	private final Conn conn;
@@ -64,8 +76,7 @@ public class FileController {
 					conn.uploadFile(name, type, size, targetPath.toString(), parent_id, user.getId());
 					Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING); // 保存文件
 				} catch (IOException e) {
-					return ResponseEntity.status(HttpStatus.CONFLICT).body("出错了哦～");
-
+					e.printStackTrace();
 				}
 			}
 		}
@@ -108,16 +119,16 @@ public class FileController {
 			File uploadDir;
 			try {
 				// 创建文件
-	            uploadDir = new File(uploadDirPath);
-	            if (!uploadDir.exists()) {
-	                uploadDir.mkdirs();
-	            }
-	            File file = new File(uploadDir, filename);
+				uploadDir = new File(uploadDirPath);
+				if (!uploadDir.exists()) {
+					uploadDir.mkdirs();
+				}
+				File file = new File(uploadDir, filename);
 				FileWriter writer = new FileWriter(file);
 				writer.write(filename); // 将文件名称写入文件
 				writer.close();
 				long size = file.length(); // 文件大小
-				String filepath = uploadDir +"/"+ filename;
+				String filepath = uploadDir + "/" + filename;
 				if (conn.uploadFile(filename, "txt", size, filepath, pid, userId)) {
 					return ResponseEntity.ok("文本文件创建成功了哦");
 				} else {
@@ -125,7 +136,7 @@ public class FileController {
 				}
 			} catch (IOException e) {
 				e.printStackTrace();
-			} 
+			}
 		}
 		return ResponseEntity.status(HttpStatus.CONFLICT).body("出错啦！");
 	}
@@ -147,15 +158,95 @@ public class FileController {
 			return ResponseEntity.ok("修改成功啦");
 		return ResponseEntity.status(HttpStatus.CONFLICT).body("修改失败啦！");
 	}
-	
-	@GetMapping("delFiles")
-	public ResponseEntity<String> delFiles(@RequestParam("id") int id , @CookieValue("USER_ID") String username){
-		if(username == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("没有登陆哦");
+
+	/**
+	 * 根据文件id删除文件
+	 * 
+	 * @param id       文件id
+	 * @param username 用户名
+	 * @return
+	 */
+	@GetMapping("/delFiles")
+	public ResponseEntity<String> delFiles(@RequestParam("id") int id, @CookieValue("USER_ID") String username) {
+		if (username == null)
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("没有登陆哦");
 		int userId = conn.getUserByUsername(username).getId();
-		if(conn.delFiles(id, userId)) {
+		if (conn.delFiles(id, userId)) {
 			return ResponseEntity.ok("删除成功！");
 		}
-		return  ResponseEntity.status(HttpStatus.CONFLICT).body("删除失败啦！");
+		return ResponseEntity.status(HttpStatus.CONFLICT).body("删除失败啦！");
+	}
+
+	/**
+	 * 获取文件数据
+	 * 
+	 * @author raining
+	 * @param id      文件id
+	 * @param usename 用户名
+	 * @return
+	 */
+	
+	@GetMapping("/fileData")
+	public ResponseEntity<byte[]> getFileData(@RequestParam("id") int id, @CookieValue("USER_ID") String usename) {
+		int userId = conn.getUserByUsername(usename).getId();
+		FileEntity fileEntity = conn.getFileById(id, userId);
+		if (fileEntity == null || fileEntity.getType().equals("folder")) {
+			return ResponseEntity.notFound().build();
+		}
+		String filename = fileEntity.getName();
+		Path filePath = Paths.get(uploadDirPath, filename);
+        Resource resource = new FileSystemResource(filePath);
+
+        if (resource.exists() && resource.isReadable()) {
+            byte[] fileData;
+			try {
+				fileData = Files.readAllBytes(filePath);
+				HttpHeaders headers = new HttpHeaders();
+	            headers.setContentType(getMediaType(filename));
+	            headers.set("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+	            headers.set("Content-Disposition", "inline; filename=\"" + filename + "\"");
+
+	            return ResponseEntity.ok()
+	                    .headers(headers)
+	                    .body(fileData);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+            
+        }
+        // 文件不存在或无法读取时返回404
+        return ResponseEntity.notFound().build();
+
+	}
+
+	private MediaType getMediaType(String filename) {
+		String extension = filename.substring(filename.lastIndexOf(".") + 1);
+		switch (extension.toLowerCase()) {
+		case "png":
+		case "jpg":
+		case "jpeg":
+			return MediaType.IMAGE_JPEG;
+		case "gif":
+			return MediaType.IMAGE_GIF;
+		case "bmp":
+			return MediaType.parseMediaType("image/bmp");
+		case "pdf":
+			return MediaType.APPLICATION_PDF;
+		case "docx":
+			return MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+		case "xlsx":
+			return MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+		case "txt":
+			return MediaType.TEXT_PLAIN;
+		case "mp4":
+			return MediaType.valueOf("video/mp4");
+		case "mp3":
+			return  MediaType.valueOf("audio/mpeg");
+		default:
+			return MediaType.APPLICATION_OCTET_STREAM;
+		}
 	}
 
 }

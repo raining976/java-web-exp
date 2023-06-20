@@ -239,4 +239,32 @@ public class Conn {
 		String str = "update file set status = 1 where id = '"+id+"' and user_id = '"+uid+"'";
 		return this.UpdateSQL(str);
 	}
+	
+	/**
+	 * 通过id获取文件entity
+	 * @author raining
+	 * @param id 文件id
+	 * @param userId 用户id
+	 * @return
+	 */
+	public FileEntity getFileById(int id, int userId) {
+		FileEntity fileEntity = null;
+		String str = "select * from file where id = '"+id+"' and user_id = '"+userId+"'";
+		try {
+			rs = this.SelectedSql(str);
+			if(rs.next()) {
+				String name = rs.getString("name");
+				int pid = rs.getInt("parent_id");
+				String type = rs.getString("type");
+				long size = rs.getLong("size");
+				String path = rs.getString("path");
+				String updated = rs.getString("updated");
+				fileEntity = new FileEntity(id,userId,pid,name,type,size,path,updated);
+				return fileEntity;
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return fileEntity;
+	}
 }
