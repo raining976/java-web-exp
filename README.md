@@ -4,6 +4,10 @@
 
 ##### 项目名称：在线文件管理器
 
+##### 演示视频链接
+
+[演示视频链接](./README.assets/java-web演示视频.mov)
+
 ##### 技术栈：   
 
 - 前端：
@@ -460,6 +464,7 @@
 如果打不开就点击assets文件里查看
 
 文件太大了就降低了分辨率和帧率
+[演示视频链接](./README.assets/java-web演示视频.mov)    
 
 <video src="./README.assets/java-web演示视频.mov"></video>
 
